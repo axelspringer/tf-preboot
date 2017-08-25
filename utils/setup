@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# Variables 
+if [ -z ${1} ]; then echo "Please, provide an AWS Region."; exit; fi;
+
+read -p "Are you REALLY sure? (y/n)" -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]
+then
+    [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
+fi
+
+AWS_REGION=${1}
+ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+
+echo "Creating S3 Bucket ..."
+aws s3api create-bucket \
+	--region "${AWS_REGION}" \
+	--create-bucket-configuration LocationConstraint="${AWS_REGION}" \
+	--bucket "tf-${ACCOUNT_ID}"
+
+echo "Enabling S3 Versioning ..."
+aws s3api put-bucket-versioning \
+    --bucket "tf-${ACCOUNT_ID}" \
+    --versioning-configuration Status=Enabled
+
+echo "Creating DynamoDB ..."
+aws dynamodb create-table \
+	--region "${AWS_REGION}" \
+	--table-name tf_locks_${ACCOUNT_ID} \
+	--attribute-definitions AttributeName=LockID,AttributeType=S \
+	--key-schema AttributeName=LockID,KeyType=HASH \
+	--provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1   
+
+echo "Writing Terraform Config ..."
+cat <<EOF > ./envs/backend.tfvars
+  bucket         = "tf-${ACCOUNT_ID}"
+  key            = "terraform.state"
+  region         = "${AWS_REGION}"
+  dynamodb_table = "tf_locks_${ACCOUNT_ID}"
+  encrypt        = "true"
+EOF
+
+sleep 5s;
+
+# preparing environment
+source './utils/prepare'

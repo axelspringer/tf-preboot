@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source ./utils/functions
+
+if [[ -z "${GOPATH}" ]]; then
+  echo "GOPATH is undefined"; exit;
+fi
+
+if [ ! -f ./envs/backend.tfvars ]; then
+    echo "No backend config found"
+fi
+
+echo "Setting up Backend ..."
+terraform init -backend=true -backend-config=./envs/backend.tfvars -force-copy
+
+echo "Setting up Environments ..."
+envs=( dev test prod )
+for env in "${envs[@]}"
+do
+  echo "Creating ${env} ..."
+  run "terraform workspace new ${env}"
+done
+
+echo "Setting Default Environment ..."
+run "terraform workspace select ${envs[0]}"

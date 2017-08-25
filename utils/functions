@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#         NAME:  run
+#  DESCRIPTION:  Executes terraform command.
+#----------------------------------------------------------------------------------------------------------------------
+function run {
+    $@
+    local status=$?
+    if [ $status -ne 0 ]; then
+        echo "error with $1" >&2
+    fi
+    return $status
+}
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#         NAME:  usage
+#  DESCRIPTION:  Display usage information.
+#----------------------------------------------------------------------------------------------------------------------
+function usage {
+    cat << EOT
+
+  Usage :  ${SCRIPT_NAME} <command> [options]
+
+  Commands:
+    - plan                Creates a plan for the selected environment and region
+    - apply               Does execute a terraform apply with the created plan
+
+  Targets:
+    - Network             Effects the entire VPC, Subnets and Gateway incl. NAT
+    - VPN                 For changes in the VPN infrastructure
+
+  Environments:
+    - dev                 Development stage for local use
+    - test                Testing stage
+    - prod                Production stage
+
+  AWS Regions:
+    - eu-west-1           Ireland
+    - eu-central-1        Frankfurt
+
+  Examples:
+    - ${SCRIPT_NAME} plan --env=test --region=eu-west-1 --target=module.network
+    - ${SCRIPT_NAME} apply --env=test --region=eu-central-1 --target=module.vpn
+
+  Options:
+    -h        Display this message
+    --env     Sets environment
+    --region  Set aws region 
+    --target  Set terraform module as a target to apply or plan
+EOT
+}   # ----------  end of function usage  ----------

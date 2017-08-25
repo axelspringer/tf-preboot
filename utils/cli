@@ -1,0 +1,107 @@
+#!/bin/bash
+
+set -o nounset                              # Treat unset variables as an error
+
+SCRIPT_NAME=`basename "$0"`
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+TFVARS="terraform.tfvars"
+ENV_PATH="./envs/"
+PLAN_PATH="./plans/"
+
+source $DIR/functions
+
+# get first option as terraform command - apply / plan
+if [ ${1#-} = $1 ]; then
+  CMD=$1
+  shift
+fi
+
+# getopts for a short help option and long region, target and env option
+optspec=":h-:"
+while getopts "$optspec" optchar; do
+    case "${optchar}" in
+        -)
+            case "${OPTARG}" in
+                region=*)
+                    REGION=${OPTARG#*=}
+                    opt=${OPTARG%=$REGION}
+                    ;;
+
+                target=*)
+                    TARGET=${OPTARG#*=}
+                    opt=${OPTARG%=$TARGET}
+                    ;;
+                env=*)
+                    ENV=${OPTARG#*=}
+                    opt=${OPTARG%=$ENV}
+                    ;;
+                *)
+                    echo "Unknown option --${OPTARG}" >&2
+                    usage; exit 1
+                    ;;
+            esac;;
+        h )  usage; exit 0                                ;;
+        *)
+            if [ "$OPTERR" != 1 ] || [ "${optspec:0:1}" = ":" ]; then
+                echo "Unknown option --${OPTARG}" >&2
+                usage; exit 1
+            fi
+            ;;
+    esac
+done
+
+# TODO: option checks are missing
+
+# construct plan in region
+PLAN_PATH+="$REGION/"
+
+# create if not exists
+[ -d "$PLAN_PATH" ] || mkdir $PLAN_PATH
+[ -x "$PLAN_PATH" ] || exit
+
+ENV_FILE="$ENV_PATH$REGION.tfvars"
+PLAN_FILE="$PLAN_PATH$ENV.$TARGET"
+TITLE=$TARGET
+
+# expand target
+TARGET="module.$REGION.$TARGET"
+
+[[ $CMD == "plan" ]] && {
+    # check file
+    if [ ! -f $ENV_FILE ]; then
+        echo "$ENV_FILE not found!"
+    fi
+
+    echo "Planning $TITLE ($ENV) in $REGION ..."
+
+    run "terraform workspace select $ENV"
+    run "terraform get"
+    run "terraform plan -var-file=$ENV_FILE -var-file=$TFVARS -target=$TARGET -out=$PLAN_FILE"
+
+    exit;
+}
+
+[[ $CMD == "apply" ]] && {
+    # check file
+    if [ ! -f $PLAN_FILE ]; then
+        echo "$PLAN_FILE not found!"
+    fi
+
+    echo "Applying $TITLE ($ENV) in $REGION ..."
+
+    run "terraform apply -target=$TARGET $PLAN_FILE"
+
+    exit;
+}
+
+
+[[ $CMD == "destroy" ]] && {
+    
+    echo "Destroying $TITLE ($ENV) in $REGION ..."
+
+    run "terraform destroy -var-file=$ENV_FILE -var-file=$TFVARS -target=$TARGET"
+
+    exit;
+} || { exit; }
