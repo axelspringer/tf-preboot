@@ -2,6 +2,4 @@
 # General
 #--------------------------------------------------------------
 
-aws_access_key  = "<YOUR_ACCESS_KEY>"
-aws_secret_key  = "<YOUR_SECRET_KEY>"
-project         = "preboot"
+project             = "preboot" // this is used as a prefix where needed

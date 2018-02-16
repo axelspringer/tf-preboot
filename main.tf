@@ -14,10 +14,7 @@ terraform {
 }
 
 # + set provider aws
-provider "aws" {
-  access_key  = "${ var.aws_access_key }"
-  secret_key  = "${ var.aws_secret_key }"
-}
+provider "aws" {} // please, set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, or AWS_SHARED_CREDENTIALS_FILE
 
 # + get module aws eu-west-1 region
 module "eu-west-1" {

@@ -25,7 +25,34 @@ git clone --depth 1 https://github.com/katallaxie/tf-preboot.git
 ```
 > your ACCOUNT_ID is used to obfiscate the S3 bucket and DynamoDB Table
 
-You can now customize your `YOUR_ACCESS_KEY` and `YOUR_SECRET_KEY` in `terraform.vars`. Or, delete these and use the `export`ed [versions](https://www.terraform.io/docs/providers/aws/).
+Please, either set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, or `AWS_SHARED_CREDENTIALS_FILE` to specify your [AWS](https://aws.amazon.com) credentials. You can find further information [here](https://www.terraform.io/docs/providers/aws/#environment-variables).
+
+It is best practice to create a new [IAM](https://console.aws.amazon.com/iam) User (e.g. `tf-example`). You should use [AWS Profiles](https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html) to stear the access.
+
+An `~/.aws/credentials` would look like this
+
+```
+[default]
+aws_access_key_id=YOUR_ACCESS_KEY
+aws_secret_access_key=YOUR_ACCESS_SECRET
+
+[tf-user]
+aws_access_key_id=TF_ACCESS_KEY
+aws_secret_access_key=TF_ACCESS_SECRET
+```
+
+The `~/.aws/config` would look like this
+
+```
+[default]
+region=us-west-2
+output=json
+
+[profile tf-user]
+output=json
+```
+
+You can then export the `tf-user` profile via `AWS_PROFILE` and use it in terraform.
 
 There are three different environments defined (`dev`, `test`, and `prod`) to which you can deploy your infrastructure. Most will likely only use `prod`.
 
@@ -50,6 +77,19 @@ Apply your plan to the select region in the desired environment.
 Voilà, you have deployed a `dev` VPC in the `eu-west-1` region.
 
 > `./utils/cli destroy --env=dev --region=eu-west-1 --target=module.vpc` destroys this VPC again
+
+## Example
+
+```
+# Setup Terraform in eu-west-1 region
+./utils/setup eu-west-1
+
+# Plan VPC in eu-west-1 region
+./utils/cli plan --env=prod --region=eu-west-1 --target=module.vpc
+
+# Apply VPC in eu-west-1 region
+./utils/cli apply --env=prod --region=eu-west-1 --target=module.vpc
+``` 
 
 ## CLI
 
